@@ -35,10 +35,10 @@ import com.glassdoor.databean.JobListing;
 import com.google.gson.Gson;
 
 public class JobSearchService {
-	private static String passCode = "19754";
-	private static String key = "IFuttOxoRG";
+	private static String passCode = "passcode";
+	private static String key = "key";
 	private static String localIP = "127.0.0.1";
-	private static String CB_API_KEY = "WDHV5C05WLC5PSQMN6TQ";
+	private static String CB_API_KEY = "cbi_key";
 	private static final String GEOCODE_URL = "http://maps.googleapis.com/maps/api/geocode/json";
 
 	public List<JobDetails> getJobDataFromGlassdoor(String jobTitle, String city)
