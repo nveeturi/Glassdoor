@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-mapping PUBLIC 
+ "-//Hibernate/Hibernate Mapping DTD//EN"
+ "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+
+<hibernate-mapping>
+	<class name="com.glassdoor.databean.JobDetails" table="JOB_DETAILS">
+		
+		<id name="jobId" column="JOB_ID" type="long"></id>
+		<property name="jobRefID" column="JOB_REF_ID" type="string" />
+		<property name="companyName" column="COMPANY_NM" type="string" />
+		<property name="jobTitle" column="JOB_TITLE" type="string" />
+		<property name="city" column="CITY" type="string" />
+		<property name="streetName1" column="STREET_NM1" type="string" />
+		<property name="streetName2" column="STREET_NM2" type="string" />
+		<property name="state" column="STATE" type="string" />
+		<property name="country" column="COUNTRY" type="string" />
+		<property name="zipCode" column="ZIP_CODE" type="string" />
+		<property name="latitude" column="LATITUDE" type="double" />
+		<property name="longitude" column="LONGITUDE" type="double" />
+		<property name="jobLink" column="JOB_LINK" type="string" />
+		<property name="jobSourceLink" column="JOB_SOURCE_LINK" type="string" />
+		<property name="source" column="JOB_SOURCE" type="string" />
+	</class>
+</hibernate-mapping>
