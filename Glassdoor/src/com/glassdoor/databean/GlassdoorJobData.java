@@ -10,6 +10,7 @@ public class GlassdoorJobData {
 	private String date;
 	private Long hoursOld;
 	private String jobViewUrl;
+	private String descriptionFragment;
 	
 	public Long getJobListingId() {
 		return jobListingId;
@@ -59,5 +60,12 @@ public class GlassdoorJobData {
 	public void setJobViewUrl(String jobViewUrl) {
 		this.jobViewUrl = jobViewUrl;
 	}
+	public String getDescriptionFragment() {
+		return descriptionFragment;
+	}
+	public void setDescriptionFragment(String descriptionFragment) {
+		this.descriptionFragment = descriptionFragment;
+	}
+	
 	
 }

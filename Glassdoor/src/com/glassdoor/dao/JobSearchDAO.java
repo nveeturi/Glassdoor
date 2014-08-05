@@ -1,5 +1,6 @@
 package com.glassdoor.dao;
 
+import java.sql.SQLException;
 import java.util.List;
 
 import org.hibernate.Criteria;
@@ -30,7 +31,7 @@ public class JobSearchDAO {
 
 	}
 
-	public void insertJobDetails(List<JobDetails> jobdetails) {
+	public void insertJobDetails(List<JobDetails> jobdetails){
 
 		HibernateUtil util = HibernateUtil.getInstance();
 		Session session = util.getSessionFactory().openSession();
@@ -41,8 +42,9 @@ public class JobSearchDAO {
 			try {
 
 				JobDetails job = (JobDetails) jobdetails.get(i);
-				/*System.out.println("object no. "+i +" "+ job.getJobId() + " "
-						+ job.getCompanyName() + " " + job.getCity());*/
+				  System.out.println("object no. "+i +"1 "+ job.getJobId() + "2 "
+				  + job.getCompanyName() + "3 " + job.getCity()+ " 4"+job.getZipCode()+"5 "+job.getCountry());
+				 
 				session.saveOrUpdate(job);
 				if (i % 20 == 0) { // 20, same as the JDBC batch size
 					// flush a batch of inserts and release memory:
@@ -50,7 +52,8 @@ public class JobSearchDAO {
 					session.clear();
 				}
 
-			} catch (NonUniqueObjectException nue) {
+			} 
+			catch (NonUniqueObjectException nue) {
 				continue;
 			}
 
@@ -61,14 +64,31 @@ public class JobSearchDAO {
 
 	}
 
-	public List<JobDetails> getAllJobDetails() {
+	public List<JobDetails> getCBJobDetails() {
 
 		HibernateUtil util = HibernateUtil.getInstance();
 		List<JobDetails> details = null;
 		@SuppressWarnings("static-access")
 		Session session = util.getSessionFactory().openSession();
 		@SuppressWarnings("unchecked")
-		List<JobDetails> results = session.createQuery("from JobDetails where source= 'CareerBuilder'")
+		List<JobDetails> results = session.createQuery(
+				"from JobDetails where source= 'CareerBuilder'").list();
+
+		if (!(results == null || results.size() == 0)) {
+			details = results;
+		}
+		session.close();
+		return details;
+	}
+
+	public List<JobDetails> getJobDetailsWithNoLocation() {
+		HibernateUtil util = HibernateUtil.getInstance();
+		List<JobDetails> details = null;
+		@SuppressWarnings("static-access")
+		Session session = util.getSessionFactory().openSession();
+		@SuppressWarnings("unchecked")
+		List<JobDetails> results = session.createQuery(
+				"from JobDetails where latitude is null OR longitude is null")
 				.list();
 
 		if (!(results == null || results.size() == 0)) {
@@ -76,6 +96,7 @@ public class JobSearchDAO {
 		}
 		session.close();
 		return details;
+
 	}
 
 }

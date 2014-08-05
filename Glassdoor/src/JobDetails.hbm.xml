@@ -21,5 +21,6 @@
 		<property name="jobLink" column="JOB_LINK" type="string" />
 		<property name="jobSourceLink" column="JOB_SOURCE_LINK" type="string" />
 		<property name="source" column="JOB_SOURCE" type="string" />
+		<property name="jobDescription" column="JOB_DESC" type="string" />
 	</class>
 </hibernate-mapping>

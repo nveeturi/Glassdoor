@@ -10,8 +10,11 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
+import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLProtocolException;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -22,24 +25,59 @@ import javax.xml.xpath.XPathFactory;
 
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.jsoup.HttpStatusException;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import com.glassdoor.dao.JobSearchDAO;
+import com.glassdoor.databean.GMapResponse;
+import com.glassdoor.databean.GMapResult;
 import com.glassdoor.databean.GlassdoorJobData;
 import com.glassdoor.databean.GoogleResponse;
 import com.glassdoor.databean.GoogleResult;
 import com.glassdoor.databean.JobDetails;
 import com.glassdoor.databean.JobListing;
+import com.glassdoor.databean.Location;
 import com.google.gson.Gson;
 
 public class JobSearchService {
-	private static String passCode = "pass";
-	private static String key = "keyvalue";
+	private static String passCode = "19754";
+	private static String key = "IFuttOxoRG";
 	private static String localIP = "127.0.0.1";
-	private static String CB_API_KEY = "cbi_key";
+	private static String CB_API_KEY = "WDHV5C05WLC5PSQMN6TQ";
+	private static final String MAPS_API_KEY = "AIzaSyCfvk1pQI4gVpVe3Q_PX9_6eKc6n8e4E1k";
 	private static final String GEOCODE_URL = "http://maps.googleapis.com/maps/api/geocode/json";
+	private static final String MAPS_NEARBY_URL = "https://maps.googleapis.com/maps/api/place/nearbysearch/json";
+	private static final String MAPS_TEXT_SEARCH_URL = "https://maps.googleapis.com/maps/api/place/textsearch/json";
+	private static String[] US_STATES = { "Alabama", "Alaska", "Arizona",
+			"Arkansas", "California", "Colorado", "Connecticut", "Delaware",
+			"District of Columbia", "Florida", "Georgia", "Hawaii", "Idaho",
+			"Illinois", "Indiana", "Iowa",
+
+			"Kansas", "Kentucky", "Louisiana", "Maine", "Maryland",
+			"Massachusetts", "Michigan", "Minnesota",
+
+			"Mississippi", "Missouri", "Montana", "Nebraska", "Nevada",
+			"New Hampshire", "New Jersey", "New Mexico",
+
+			"New York", "North Carolina", "North Dakota", "Ohio", "Oklahoma",
+			"Oregon", "Pennsylvania", "Rhode Island",
+
+			"South Carolina", "South Dakota", "Tennessee", "Texas", "Utah",
+			"Vermont", "Virginia", "Washington",
+
+			"West Virginia", "Wisconsin", "Wyoming" };
+
+	private static String[] StateCodes = { "AL", "AK", "AZ", "AR", "CA", "CO",
+			"CT", "DC", "DE", "FL", "GA", "HI", "ID", "IL", "IN", "IA", "KS",
+			"KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE",
+			"NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA",
+			"RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI",
+			"WY" };
 
 	public List<JobDetails> getJobDataFromGlassdoor(String jobTitle, String city)
 			throws IOException {
@@ -98,6 +136,7 @@ public class JobSearchService {
 				jobdetail.setJobLink(job.getJobViewUrl());
 				jobdetail.setSource(job.getSource());
 				jobdetail.setCountry("USA");
+				jobdetail.setJobDescription(job.getDescriptionFragment());
 				jobResult.add(jobdetail);
 
 			}
@@ -116,10 +155,10 @@ public class JobSearchService {
 
 	}
 
-	public List<JobDetails> getAllJobData() {
+	public List<JobDetails> getCBJobData() {
 		List<JobDetails> details = null;
 		JobSearchDAO dao = new JobSearchDAO();
-		details = dao.getAllJobDetails();
+		details = dao.getCBJobDetails();
 		return details;
 	}
 
@@ -286,7 +325,7 @@ public class JobSearchService {
 	public List<JobDetails> updateLocationFromCB() throws IOException,
 			ParserConfigurationException, SAXException,
 			XPathExpressionException {
-		List<JobDetails> details = getAllJobData();
+		List<JobDetails> details = getCBJobData();
 		for (JobDetails jobDetails : details) {
 			System.out.println("Job ID processing: " + jobDetails.getJobId());
 
@@ -296,7 +335,7 @@ public class JobSearchService {
 					URLEncoder.encode(city, "UTF-8"), jobDetails);
 			// Check if the lat-long maps to the correct address
 
-			validateLocation(jobDetails);
+			validateFromGoogleAPI(jobDetails);
 			// if it does not match with the company's address or does not have
 			// the company name, set it back to null
 
@@ -306,24 +345,149 @@ public class JobSearchService {
 
 	}
 
-	private void validateLocation(JobDetails jobDetails) throws IOException {
+	private void validateFromGoogleAPI(JobDetails jobDetails)
+			throws IOException {
 
 		if (jobDetails.getLatitude() == null
 				|| jobDetails.getLongitude() == null) {
 			return;
 		}
-		// Call geocode api to get the address corresponding to the lat-long
+		// Call Maps API to get the nearest company location from the lat/long
+		// available
+
 		String latlong = jobDetails.getLatitude().toString() + ","
 				+ jobDetails.getLongitude().toString();
-		GoogleResponse grsp = convertFromLatLong(latlong);
-		if (grsp.getStatus().equals("OK")) {
-			for (GoogleResult result : grsp.getResults()) {
-				System.out.println("address is :"
-						+ result.getFormatted_address());
+
+		setValidAddress(latlong, jobDetails);
+
+	}
+
+	private void setValidAddress(String latlong, JobDetails jobDetails)
+			throws IOException {
+		String address = "";
+		GMapResponse grsp = getNearByLocation(latlong,
+				jobDetails.getCompanyName());
+		if (grsp != null) {
+			if (grsp.getStatus().equals("OK")) {
+				if (grsp.getResults().length == 0) {
+					jobDetails.setLatitude(null);
+					jobDetails.setLongitude(null);
+					return;
+				}
+				int relevantCount = 0;
+				for (GMapResult result : grsp.getResults()) {
+
+					if (result.getVicinity().contains(jobDetails.getCity())
+							|| result.getVicinity().contains(
+									jobDetails.getCompanyName())) {
+						address = result.getVicinity();
+						latlong = result.getGeometry().getLocation().getLat()
+								.toString()
+								+ ","
+								+ result.getGeometry().getLocation().getLng()
+										.toString();
+						relevantCount++;
+						jobDetails.setLatitude(Double.valueOf(result
+								.getGeometry().getLocation().getLat()));
+						jobDetails.setLongitude(Double.valueOf(result
+								.getGeometry().getLocation().getLng()));
+
+						if (relevantCount > 1) {
+							address = "";
+							latlong = "";
+							jobDetails.setLatitude(null);
+							jobDetails.setLongitude(null);
+							break;
+						}
+					}
+
+					System.out.println("address is :" + address);
+
+				}
+
+				if (!address.equals("") && !latlong.equals("")) {
+					if (address.split(",").length == 1) {
+						jobDetails.setLatitude(null);
+						jobDetails.setLongitude(null);
+					} else if (address.split(",").length < 2) {
+						GoogleResponse resp = convertFromLatLong(latlong);
+						if (resp.getResults().length > 0) {
+							GoogleResult result = resp.getResults()[0];
+							setAddressDetails(result.getFormatted_address(),
+									jobDetails);
+							System.out.println(result.getFormatted_address());
+						}
+					} else {
+						grsp = getTextLocation(address);
+						if (grsp.getResults().length > 0) {
+							GMapResult result = (GMapResult) grsp.getResults()[0];
+							setAddressDetails(result.getFormatted_address(),
+									jobDetails);
+							System.out.println(result.getFormatted_address());
+						}
+					}
+				}
+			} else {
+				System.out.println(grsp.getStatus());
+				jobDetails.setLatitude(null);
+				jobDetails.setLongitude(null);
 			}
-		} else {
-			System.out.println(grsp.getStatus());
+
 		}
+	}
+
+	private void setAddressDetails(String formattedAddress,
+			JobDetails jobDetails) {
+		System.out.println("formatted" + formattedAddress);
+		if (!formattedAddress.equals("")) {
+			String[] splitAddress = formattedAddress.split(",");
+			jobDetails.setStreetName1(splitAddress[0].trim());
+			jobDetails.setCity(splitAddress[1].trim());
+			String[] stateZip = splitAddress[2].trim().split("\\s");
+			System.out.println(stateZip);
+			jobDetails.setState(stateZip[0]);
+			if (stateZip.length > 1) {
+				jobDetails.setZipCode(stateZip[1]);
+			}
+		}
+	}
+
+	public GMapResponse getNearByLocation(String latlongString,
+			String companyName) throws IOException {
+		if (companyName == null || companyName.equals("")) {
+			return null;
+		}
+
+		URL url = new URL(MAPS_NEARBY_URL + "?location="
+				+ URLEncoder.encode(latlongString, "UTF-8")
+				+ "&rankby=distance&name="
+				+ URLEncoder.encode(companyName, "UTF-8") + "&key="
+				+ MAPS_API_KEY);
+		// Open the Connection
+		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+
+		InputStream in = conn.getInputStream();
+		ObjectMapper mapper = new ObjectMapper();
+		GMapResponse response = (GMapResponse) mapper.readValue(in,
+				GMapResponse.class);
+		in.close();
+		return response;
+
+	}
+
+	public GMapResponse getTextLocation(String textSearch) throws IOException {
+
+		URL url = new URL(MAPS_TEXT_SEARCH_URL + "?query="
+				+ URLEncoder.encode(textSearch, "UTF-8") + "&key="
+				+ MAPS_API_KEY);
+		// Open the Connection
+		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+		InputStream in = conn.getInputStream();
+		ObjectMapper mapper = new ObjectMapper();
+		GMapResponse response = (GMapResponse) mapper.readValue(in,
+				GMapResponse.class);
+		in.close();
+		return response;
 
 	}
 
@@ -332,7 +496,6 @@ public class JobSearchService {
 
 		URL url = new URL(GEOCODE_URL + "?latlng="
 				+ URLEncoder.encode(latlongString, "UTF-8") + "&sensor=false");
-		// Open the Connection
 		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 
 		InputStream in = conn.getInputStream();
@@ -344,4 +507,124 @@ public class JobSearchService {
 
 	}
 
+	public GoogleResponse getLocationLatLong(String locationName)
+			throws IOException {
+
+		URL url = new URL(GEOCODE_URL + "?address="
+				+ URLEncoder.encode(locationName, "UTF-8"));
+		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+
+		InputStream in = conn.getInputStream();
+		ObjectMapper mapper = new ObjectMapper();
+		GoogleResponse response = (GoogleResponse) mapper.readValue(in,
+				GoogleResponse.class);
+		in.close();
+		return response;
+
+	}
+
+	public void updateLocationInfo() throws IOException {
+
+		// Traverse through all the records that do not have lat-long
+		List<JobDetails> details = null;
+		JobSearchDAO dao = new JobSearchDAO();
+		details = dao.getJobDetailsWithNoLocation();
+		for (JobDetails jobDetails : details) {
+
+			String latlong = "";
+			// Get the lat-long of the City
+			GoogleResponse res = getLocationLatLong(jobDetails.getCity());
+			if (res.getResults() != null && res.getResults().length > 0) {
+				Location loc = res.getResults()[0].getGeometry().getLocation();
+				latlong = loc.getLat() + "," + loc.getLng();
+			}
+			System.out.println(latlong);
+			// Call the nearby search Google Places API with the company
+			// name
+			// and latlong
+
+			setValidAddress(latlong, jobDetails);
+
+			// If it is a single location single company, we will get one
+			// record
+			// If it is a single company in each location, we will get one
+			// result
+
+			// If many outlets in single city, we will get many results
+			saveJobDetails(details);
+
+			// For such records, we will call Career builder API if the source
+			// is
+			// Careerbuilder
+			// For remaining records, we will try to scrape the company's
+			// website
+			// and get the location information
+			// Save in the database
+
+		}
+	}
+
+	public void updateLocationFromJobLink() {
+		List<JobDetails> details = null;
+		try {
+			JobSearchDAO dao = new JobSearchDAO();
+			// STEP 4: Execute a query
+			details = dao.getJobDetailsWithNoLocation();
+			org.jsoup.nodes.Document doc = null;
+			boolean flag = false;
+			// STEP 5: Extract data from result set
+			String link = "";
+			for (JobDetails jobDetails : details) {
+				System.out.println(jobDetails.getJobLink());
+				link = jobDetails.getJobLink();
+				try {
+					doc = Jsoup.connect(link).ignoreContentType(true)
+							.timeout(0).get();
+				} catch (HttpStatusException hp) {
+					flag = true;
+				} catch (SSLHandshakeException e) {
+					flag = true;
+				} catch (MalformedURLException e) {
+					flag = true;
+				} catch (SSLProtocolException e) {
+					flag = true;
+				} catch (Exception e) {
+					flag = true;
+				}
+				if (flag) {
+					flag = false;
+					continue;
+				}
+				Elements elements = doc.body().select("*");
+
+				for (Element x : elements) {
+					// System.out.println(x.ownText());
+					String text = x.ownText();
+					String[] words = text.split("\\s+");
+					for (String word : words) {
+						if (Arrays.asList(US_STATES).contains(word)
+								|| Arrays.asList(StateCodes).contains(word)) {
+							System.out.println("Address found");
+							System.out.println(text);
+							return;
+						} else {
+							System.out
+									.println("-------------Address not found");
+						}
+					}
+				}
+
+				// STEP 6: Clean-up environment
+
+			}
+
+		} catch (Exception e) {
+			// Handle errors for Class.forName
+			e.printStackTrace();
+		}
+
+		//saveJobDetails(details);
+
+		System.out.println("Goodbye!");
+	}// end main
 }

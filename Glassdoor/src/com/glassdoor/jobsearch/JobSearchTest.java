@@ -11,14 +11,17 @@ public class JobSearchTest {
 
 		JobSearchService jobService = new JobSearchService();
 		try {
+			
 			//List<JobDetails> jobdetails = jobService.getJobDataFromGlassdoor("", "Pittsburgh");
 			//jobService.saveJobDetails(jobdetails);
-			jobService.updateLocationFromCB();
+			//jobService.updateLocationFromCB();
+			//jobService.updateLocationInfo();
+			jobService.updateLocationFromJobLink();
 		
-		} catch (IOException e) {
+		} //catch (IOException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+			//e.printStackTrace();
+	//	}
 		catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

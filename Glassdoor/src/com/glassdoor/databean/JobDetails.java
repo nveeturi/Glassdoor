@@ -11,12 +11,13 @@ public class JobDetails {
 	private String streetName2;
 	private String state;
 	private String country;
-	private Long zipCode;
+	private String zipCode;
 	private Double latitude;
 	private Double longitude;
 	private String jobLink;
 	private String source;
 	private String jobSourceLink;
+	private String jobDescription;
 	
 	
 	public Long getJobId() {
@@ -67,10 +68,10 @@ public class JobDetails {
 	public void setCountry(String country) {
 		this.country = country;
 	}
-	public Long getZipCode() {
+	public String getZipCode() {
 		return zipCode;
 	}
-	public void setZipCode(Long zipCode) {
+	public void setZipCode(String zipCode) {
 		this.zipCode = zipCode;
 	}
 	public Double getLatitude() {
@@ -108,6 +109,12 @@ public class JobDetails {
 	}
 	public void setJobSourceLink(String jobSourceLink) {
 		this.jobSourceLink = jobSourceLink;
+	}
+	public String getJobDescription() {
+		return jobDescription;
+	}
+	public void setJobDescription(String jobDescription) {
+		this.jobDescription = jobDescription;
 	}
 	
 
