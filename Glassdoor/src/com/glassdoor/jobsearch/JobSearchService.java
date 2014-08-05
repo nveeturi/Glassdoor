@@ -19,18 +19,15 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
-import org.apache.http.client.utils.URLEncodedUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.w3c.dom.Document;
-import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import com.glassdoor.dao.JobSearchDAO;
@@ -45,8 +42,8 @@ import com.glassdoor.databean.Location;
 import com.google.gson.Gson;
 
 public class JobSearchService {
-	private static String passCode = "19754";
-	private static String key = "IFuttOxoRG";
+	private static String passCode = "pass";
+	private static String key = "key";
 	private static String localIP = "127.0.0.1";
 	private static String CB_API_KEY = "WDHV5C05WLC5PSQMN6TQ";
 	private static final String MAPS_API_KEY = "AIzaSyCfvk1pQI4gVpVe3Q_PX9_6eKc6n8e4E1k";
